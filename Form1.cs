@@ -16,7 +16,10 @@ namespace SDFTry
     {
         public static int windowSizeX = 256;
         public static int windowSizeY = 256;
+        public static int directionsCount = 20;
+        public static int rayIterationsCount = 4;
         public Bitmap picture;
+        private List<Bitmap> frames = new List<Bitmap>();
         public List<Circle> circles = new List<Circle>();
         public int offsetByX = windowSizeX / 2;
         public int offsetByY = windowSizeY / 2;
@@ -35,7 +38,7 @@ namespace SDFTry
         private void Form1_Load(object sender, EventArgs e)
         {
             circles.Add(new Circle(0, 40, 20, new int[] { 255, 0, 0 }));
-            circles.Add(new Circle(-30, 0, 20, new int[] { 0, 0, 255 }));
+            circles.Add(new Circle(-30, 0, 20, new int[] { 100, 100, 255 }));
             circles.Add(new Circle(30, 0, 20, new int[] { 0, 255, 0 }));
 
             pictureBox1.Width = windowSizeX;
@@ -54,6 +57,7 @@ namespace SDFTry
 
         private void pictureBox1_Paint(object sender, PaintEventArgs e)
         {
+            picture = new Bitmap(windowSizeX, windowSizeY);
             pictureBox1.Image = picture;
             for (int y = 0; y < picture.Height; y++)
             {
@@ -63,6 +67,8 @@ namespace SDFTry
                     picture.SetPixel(x, y, Color.FromArgb(color[0], color[1], color[2]));
                 }
             }
+            if (frames.Count < 3)
+                frames.Add(picture);
         }
 
         public int[] CalculateColor(double localX, double localY)
@@ -71,15 +77,13 @@ namespace SDFTry
             double globalX = (localX - offsetByX) * scale;
             double globalY = (-localY + offsetByY) * scale;
 
-            int directionsCount = 10;
-            int stepsCount = 4;
             double angle = 2 * Math.PI / directionsCount * (rand.NextDouble() * 0.5);
 
             for (int i = 0; i < directionsCount; i++)
             {
                 double rayX = globalX;
                 double rayY = globalY;
-                for (int j = 0; j < stepsCount; j++)
+                for (int j = 0; j < rayIterationsCount; j++)
                 {
                     double Sdf = 10000;
                     int[] color = new int[] { 0, 0, 0 };
