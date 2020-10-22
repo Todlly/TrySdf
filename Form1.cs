@@ -9,16 +9,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Threading;
+using Microsoft.Win32;
 
 namespace SDFTry
 {
     public partial class Form1 : Form
     {
-        public static int windowSizeX = 256;
-        public static int windowSizeY = 256;
-        public static int directionsCount = 20;
+        int frameNumber = 0;
+        public static int windowSizeX = 250;
+        public static int windowSizeY = 250;
+        public static int directionsCount = 10;
         public static int rayIterationsCount = 4;
         public Bitmap picture;
+        private int corretionFramesCount = 2;
         private List<Bitmap> frames = new List<Bitmap>();
         public List<Circle> circles = new List<Circle>();
         public int offsetByX = windowSizeX / 2;
@@ -28,7 +32,7 @@ namespace SDFTry
         bool isMouseDown = false;
         int[] mouseCoordinates;
 
-        Random rand = new Random();
+        Random rand = new Random(DateTime.Now.Millisecond);
 
         public Form1()
         {
@@ -44,6 +48,16 @@ namespace SDFTry
             pictureBox1.Width = windowSizeX;
             pictureBox1.Height = windowSizeY;
             picture = new Bitmap(windowSizeX, windowSizeY);
+            timer1.Start();
+
+            ThreadStart workStart = new ThreadStart(PaintPicture);
+            Thread work = new Thread(workStart);
+            work.Start();
+        }
+
+        private void PaintingPicture()
+        {
+
         }
 
         public double SdfCircle(double x, double y, Circle circle)
@@ -55,10 +69,11 @@ namespace SDFTry
             return length;
         }
 
-        private void pictureBox1_Paint(object sender, PaintEventArgs e)
+        private void PaintPicture()
         {
+            Debug.WriteLine("ne hui");
             picture = new Bitmap(windowSizeX, windowSizeY);
-            pictureBox1.Image = picture;
+            //pictureBox1.Image = picture;
             for (int y = 0; y < picture.Height; y++)
             {
                 for (int x = 0; x < picture.Width; x++)
@@ -67,15 +82,18 @@ namespace SDFTry
                     picture.SetPixel(x, y, Color.FromArgb(color[0], color[1], color[2]));
                 }
             }
-            if (frames.Count < 3)
-                frames.Add(picture);
+            if (frames.Count >= corretionFramesCount)
+                frames.RemoveAt(0);
+            frames.Add(picture);
+            //Text = (++frameNumber).ToString();
         }
 
-        public int[] CalculateColor(double localX, double localY)
+        public int[] CalculateColor(int localX, int localY)
         {
+
             int[] outputColor = new int[] { 0, 0, 0 };
-            double globalX = (localX - offsetByX) * scale;
-            double globalY = (-localY + offsetByY) * scale;
+            int globalX = (int)((localX - offsetByX) * scale);
+            int globalY = (int)((-localY + offsetByY) * scale);
 
             double angle = 2 * Math.PI / directionsCount * (rand.NextDouble() * 0.5);
 
@@ -120,6 +138,18 @@ namespace SDFTry
                 angle += Math.PI * 2 / directionsCount * (rand.NextDouble() + 0.5);
             }
 
+            if (frames.Count >= corretionFramesCount)
+            {
+                foreach (Bitmap frame in frames)
+                {
+                    outputColor[0] += frame.GetPixel(localX, localY).R;
+                    outputColor[1] += frame.GetPixel(localX, localY).G;
+                    outputColor[2] += frame.GetPixel(localX, localY).B;
+                }
+                outputColor[0] /= corretionFramesCount + 1;
+                outputColor[1] /= corretionFramesCount + 1;
+                outputColor[2] /= corretionFramesCount + 1;
+            }
             return outputColor;
         }
 
@@ -157,6 +187,15 @@ namespace SDFTry
                 scale += 0.1;
         }
 
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+
+        }
+
+        private void pictureBox1_Paint(object sender, PaintEventArgs e)
+        {
+          //  pictureBox1.Image = picture;
+        }
     }
 
     public class Circle
