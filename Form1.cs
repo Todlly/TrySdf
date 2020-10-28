@@ -11,18 +11,19 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Threading;
 using Microsoft.Win32;
+using System.Runtime.InteropServices;
 
 namespace SDFTry
 {
     public partial class Form1 : Form
     {
         int frameNumber = 0;
-        public static int windowSizeX = 250;
-        public static int windowSizeY = 250;
-        public static int directionsCount = 10;
+        public static int windowSizeX = 200;
+        public static int windowSizeY = 200;
+        public static int directionsCount = 8;
         public static int rayIterationsCount = 4;
         public Bitmap picture;
-        private int corretionFramesCount = 2;
+        private int corretionFramesCount = 10;
         private List<Bitmap> frames = new List<Bitmap>();
         public List<Circle> circles = new List<Circle>();
         public int offsetByX = windowSizeX / 2;
@@ -42,7 +43,7 @@ namespace SDFTry
         private void Form1_Load(object sender, EventArgs e)
         {
             circles.Add(new Circle(0, 40, 20, new int[] { 255, 0, 0 }));
-            circles.Add(new Circle(-30, 0, 20, new int[] { 100, 100, 255 }));
+            circles.Add(new Circle(-30, 0, 20, new int[] { 50, 50, 255 }));
             circles.Add(new Circle(30, 0, 20, new int[] { 0, 255, 0 }));
 
             pictureBox1.Width = windowSizeX;
@@ -50,9 +51,9 @@ namespace SDFTry
             picture = new Bitmap(windowSizeX, windowSizeY);
             timer1.Start();
 
-            ThreadStart workStart = new ThreadStart(PaintPicture);
-            Thread work = new Thread(workStart);
-            work.Start();
+            //ThreadStart workStart = new ThreadStart(PaintPicture);
+            //Thread work = new Thread(workStart);
+            //work.Start();
         }
 
         private void PaintingPicture()
@@ -71,21 +72,36 @@ namespace SDFTry
 
         private void PaintPicture()
         {
-            Debug.WriteLine("ne hui");
             picture = new Bitmap(windowSizeX, windowSizeY);
-            //pictureBox1.Image = picture;
+            BitmapData bitmapData = picture.LockBits(new Rectangle(0, 0, picture.Width, picture.Height), ImageLockMode.ReadOnly, picture.PixelFormat);
+            int bytesCount = bitmapData.Stride * bitmapData.Height;
+            byte[] bits = new byte[bytesCount];
+
             for (int y = 0; y < picture.Height; y++)
             {
                 for (int x = 0; x < picture.Width; x++)
                 {
                     int[] color = CalculateColor(x, y);
-                    picture.SetPixel(x, y, Color.FromArgb(color[0], color[1], color[2]));
+                    int index = (picture.Height * y + x) * 4;
+                    bits[index + 0] = (byte)color[2];
+                    bits[index + 1] = (byte)color[1];
+                    bits[index + 2] = (byte)color[0];
+                    bits[index + 3] = 255;
+                    //picture.SetPixel(x, y, Color.FromArgb(color[0], color[1], color[2]));
                 }
             }
-            if (frames.Count >= corretionFramesCount)
+            Marshal.Copy(bits, 0, bitmapData.Scan0, bytesCount);
+            picture.UnlockBits(bitmapData);
+
+            if (frames.Count >= corretionFramesCount && frames.Count != 0)
                 frames.RemoveAt(0);
             frames.Add(picture);
-            //Text = (++frameNumber).ToString();
+
+            pictureBox1.Image = picture;
+            Text = (frameNumber++).ToString();
+
+
+
         }
 
         public int[] CalculateColor(int localX, int localY)
@@ -130,6 +146,12 @@ namespace SDFTry
                         outputColor[1] = 0;
                         outputColor[2] = 0;
                         return outputColor;
+                    }else if(Sdf <= 0)
+                    {
+                        outputColor[0] = color[0];
+                        outputColor[1] = color[2];
+                        outputColor[2] = color[1];
+                        return outputColor;
                     }
 
                     rayX += Sdf * Math.Cos(angle);
@@ -142,6 +164,7 @@ namespace SDFTry
             {
                 foreach (Bitmap frame in frames)
                 {
+                    
                     outputColor[0] += frame.GetPixel(localX, localY).R;
                     outputColor[1] += frame.GetPixel(localX, localY).G;
                     outputColor[2] += frame.GetPixel(localX, localY).B;
@@ -194,7 +217,7 @@ namespace SDFTry
 
         private void pictureBox1_Paint(object sender, PaintEventArgs e)
         {
-          //  pictureBox1.Image = picture;
+            PaintPicture();
         }
     }
 
